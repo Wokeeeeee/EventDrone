@@ -43,21 +43,21 @@ width: 640
 # for ros
 event_topic: "/prophesee/left/events"
 imu_topic: "/imu/data"
-bag_path: "/home/cuili/zzz/Canny_EVT_open_source/robot_n_edited.bag"
+bag_path: "/home/lxy/Downloads/robot_n_edited.bag"
 
 # for system
-pcd_path: "/home/cuili/zzz/Canny_EVT_open_source/robot_n.pcd"
+pcd_path: "/home/lxy/event_camera/cannyEVT/dataset/robot_normal.pcd"
 #"/home/cuili/Downloads/semi_cloud_enu_back.pcd"
 #
 #"/home/cuili/zzz/semidense-lines-gt-5/results_line_segments/SemiDense.pcd"
 #"/media/cuili/WantingHDD/zzz/VECtor/our_edited/robot_n.pcd"
 
-resultPath: "/home/cuili/zzz/Canny_EVT_open_source/result.txt"
+resultPath: "/home/lxy/event_camera/cannyEVT/Canny-EVT/result.txt"
 start_time: 1642661138.936530 # TBD
 #1642661139.103197 #test new for yrz
 
 # start_time: 1642661139.03653 # vins
-frame_frequency: 300 #hz
+frame_frequency: 200 #hz
 
 ts_decay_factor: 50.0e-3
 
@@ -70,6 +70,6 @@ NormalFlow: 0
 queueSize: 5
 
 # for visualization
-visulization: 1 #visualize the 3D-2D alignment in optimization
+visulization: 0 #visualize the 3D-2D alignment in optimization
 zMin: 0.8
 zMax: 2.5

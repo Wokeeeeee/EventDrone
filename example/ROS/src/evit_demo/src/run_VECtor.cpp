@@ -23,6 +23,32 @@ std::shared_ptr<CannyEVT::System> pSystem;
 std::string bag_path;
 double start_time;
 
+void pubIMUData( std::string &imu_topic, std::shared_ptr<CannyEVT::System> pSystem){
+    //process event data to system
+    rosbag::Bag bag;
+
+    bag.open( bag_path, rosbag::bagmode::Read );
+
+    std::vector<std::string> topics{ imu_topic };
+
+    rosbag::View view( bag, rosbag::TopicQuery( topics ) );
+
+    for ( rosbag::MessageInstance const m : rosbag::View( bag ) )
+    {
+        std::string topic = m.getTopic();
+        if ( topic == imu_topic )
+        {
+            sensor_msgs::Imu::ConstPtr ip = m.instantiate<sensor_msgs::Imu>();
+
+            pSystem->GrabIMUData(ip->header.stamp.toSec() ,
+                                 ip->angular_velocity.x, ip->angular_velocity.y, ip->angular_velocity.z,
+                                 ip->linear_acceleration.x, ip->linear_acceleration.y, ip->linear_acceleration.z);
+
+        }
+    }
+
+    bag.close();
+}
 
 void PubEventData(std::string &event_topic, std::shared_ptr<CannyEVT::System> pSystem){
   //process event data to system
@@ -82,7 +108,8 @@ int main( int argc, char **argv )
   std::thread thd_BackEnd(&CannyEVT::System::ProcessBackEnd, pSystem);
 	
   //reading data from rosbag 
-	std::thread thd_PubEventData(PubEventData, std::ref(event_topic), pSystem);
+  std::thread thd_PubEventData(PubEventData, std::ref(event_topic), pSystem);
+  std::thread thd_PubIMUData(pubIMUData, std::ref(imu_topic), pSystem);
 
   std::thread thd_Draw(&CannyEVT::System::Draw, pSystem);
 

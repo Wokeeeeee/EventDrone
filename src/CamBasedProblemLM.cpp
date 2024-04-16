@@ -56,13 +56,18 @@ void CamBasedProblemLM::setStochasticSampling(size_t offset, size_t N)
     }
 }
 
-void CamBasedProblemLM::setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Matrix4d Twc, Eigen::Matrix4d Twl)
+void CamBasedProblemLM::setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Matrix4d Twc, Eigen::Matrix4d Twl, Eigen::VectorXd ix)
 {
+    std::cout<<"lm problem setting init:"<<std::endl;
     mTs = Ts;
     mCloud = cloud;
     mRwc = Twc.block<3, 3>(0, 0);
     mtwc = Twc.block<3, 1>(0, 3);
 
+    //create after mR and mT
+    iTcw = Eigen::Matrix4d::Identity();
+    std::cout<<ix<<std::endl;
+    getWarpingTransformation(iTcw,ix); // update the observed imu estimated rt at init section and one time only in optimizer
     int numPoints = mCloud->size();
     if (numPoints >  mConfig->MAX_REGISTRATION_POINTS_)
         numPoints = mConfig->MAX_REGISTRATION_POINTS_;
@@ -184,11 +189,54 @@ void CamBasedProblemLM::addMotionUpdate(const Eigen::Matrix<double, 6, 1> &dx)
     Eigen::Vector3d dt = dx.block<3, 1>(3, 0);
     // add rotation
     Eigen::Matrix3d dR = Utility::cayley2rot(dc);
+    //std::cout<<dR<<std::endl<<dt<<std::endl<<"-----\n";
     Eigen::Matrix3d newR = dR * mRwc;
     Eigen::JacobiSVD<Eigen::Matrix3d> svd(newR, Eigen::ComputeFullU | Eigen::ComputeFullV);
     mRwc = svd.matrixU() * svd.matrixV().transpose();
     mtwc = dt + dR * mtwc;
 }
+double CamBasedProblemLM::ImuDiff(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const
+{
+    // 计算平移向量的差异
+    Eigen::Vector3d translationDiff = T1.block<3,1>(0,3) - T2.block<3,1>(0,3);
+
+    // 计算旋转矩阵的差异
+    Eigen::Matrix3d rotationDiff = T1.block<3,3>(0,0) * T2.block<3,3>(0,0).transpose();
+    Eigen::AngleAxisd angleAxis(rotationDiff);
+    double rotationDiffAngle = angleAxis.angle();
+
+    // 计算损失
+    double loss = translationDiff.norm() + rotationDiffAngle;
+
+    return loss;
+}
+
+//Eigen::Matrix<double, 1, 12> CamBasedProblemLM::ImuJacobian(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const
+//{
+//    Eigen::Matrix<double, 1, 12> jacobian;
+//
+//    // 计算平移向量的差异
+//    Eigen::Vector3d translationDiff = T1.block<3,1>(0,3) - T2.block<3,1>(0,3);
+//    // 平移向量差异对T1的偏导数
+//    Eigen::Matrix<double, 3, 12> translationGradient;
+//    translationGradient.setZero();
+//    translationGradient.block<3, 3>(0, 0) = -Eigen::Matrix3d::Identity(); // 对平移向量的偏导数
+//
+//    // 计算旋转矩阵的差异
+//    Eigen::Matrix3d rotationDiff = T1.block<3,3>(0,0) * T2.block<3,3>(0,0).transpose();
+//    Eigen::AngleAxisd angleAxis(rotationDiff);
+//    double rotationDiffAngle = angleAxis.angle();
+//    // 旋转矩阵差异对T1的偏导数
+//    Eigen::Matrix<double, 3, 12> rotationGradient;
+//    rotationGradient.setZero();
+//    rotationGradient.block<3, 9>(0, 3) = -Eigen::Matrix<double, 3, 9>::Identity(); // 对旋转矩阵的偏导数
+//
+//    // 将平移向量和旋转矩阵的梯度拼接成完整的雅可比矩阵
+//    jacobian << translationGradient, rotationGradient;
+//
+//    return jacobian;
+//}
+
 
 int CamBasedProblemLM::operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::VectorXd &fvec) const
 {
@@ -225,10 +273,14 @@ int CamBasedProblemLM::operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::V
             double irls_weight = 1.0;
             if (ri.residual_(0) > mConfig->huber_threshold_)
                 irls_weight = mConfig->huber_threshold_ / ri.residual_(0);
-            fvec[i] = sqrt(irls_weight) * ri.residual_(0);
+            fvec[i] = sqrt(irls_weight) * ri.residual_(0)+ImuDiff(Tcw,iTcw);
             // ri.weight_ = sqrt(irls_weight);
         }
     }
+
+    //todo: calculate the loss between iTcw and Tcw
+    //fvec[mResItemsStochSampled.size()]=ImuDiff(Tcw,iTcw);
+
     // std::cout << "fvec_event_norm:" << fvec.norm() <<std::endl;
 
     return 0;
@@ -326,7 +378,9 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
             //      LOG(INFO) << "dT_dG:\n" << dT_dG;
             // fjacBlock.row(i) = grad.transpose() * dPi_dT * J_constPart * dPi_dT * dT_dG * ri.p_(2); // ri.p_(2) refers to 1/rho_i which is actually coming with dInvPi_dx.
             fjacBlock.row(i) = grad.transpose() * dPi_dT * dT_dG;
+            //Eigen::Matrix<double, 1, 12> m=ImuJacobian(pw,iTcw);
             fjacBlock.row(i) = ri.weight_ * fjacBlock.row(i);
+            //std::cout<<fjacBlock.row(i).cols()<<fjacBlock.row(i).rows()<<std::endl<<m.cols()<<m.rows()<<std::endl;
         }
     }
     // assemble with dG_dtheta

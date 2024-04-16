@@ -63,7 +63,7 @@ public:
     ~CamBasedProblemLM() = default;
 
     void setConfig(CamBasedProblemConfig::Ptr config);
-    void setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Matrix4d Twc, Eigen::Matrix4d Twl);
+    void setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Matrix4d Twc, Eigen::Matrix4d Twl, Eigen::VectorXd ix);
     Eigen::Matrix4d getPose();
     void setStochasticSampling(size_t offset, size_t N);
     int operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::VectorXd &fvec) const;
@@ -72,7 +72,8 @@ public:
 
     bool patchInterpolation(const Eigen::MatrixXd &img, const Eigen::Vector2d &location,
                             Eigen::MatrixXd &patch, bool debug) const;
-
+    double ImuDiff(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const;
+    Eigen::Matrix<double, 1, 12> ImuJacobian(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const;
     void thread(Job &job) const;
     void computeJ_G(const Eigen::Matrix<double, 6, 1> &x, Eigen::Matrix<double, 12, 6> &J_G);
     bool isValidPatch(Eigen::Vector2d &patchCentreCoord, Eigen::MatrixXi &mask, size_t wx, size_t wy) const;
@@ -86,6 +87,8 @@ public:
     CamBasedProblemConfig::Ptr mConfig;
     TimeSurface::Ptr mTs;
     pCloud mCloud;
+    Eigen::Matrix4d iTcw;
+
 
     ResidualItems mResItems, mResItemsStochSampled;
 

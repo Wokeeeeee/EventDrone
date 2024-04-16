@@ -61,11 +61,11 @@ mEventCam(eventCam), mCamBasedProblemConfig(new CamBasedProblemConfig(1, 1, 5, "
 
 
 bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Eigen::Matrix4d& Tinit,
-                                     const Eigen::Matrix4d& Twl, Eigen::Matrix4d& result)
+                                     const Eigen::Matrix4d& Twl, Eigen::Matrix4d& result, Eigen::VectorXd& ix)
 {
     Eigen::Matrix4d Twc_init = Tinit;
     Eigen::Matrix4d Twc_last = Twl;
-    mEventProblem->setProblem(ts, cloud, Twc_init, Twc_last);
+    mEventProblem->setProblem(ts, cloud, Twc_init, Twc_last, ix);
 
     Eigen::LevenbergMarquardt<CamBasedProblemLM, double> lm(*mEventProblem);
     lm.resetParameters();
@@ -75,6 +75,8 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
 
     size_t iteration = 0;
     size_t nfev = 0;
+    //Eigen::Matrix3d del_r = Eigen::Matrix3d::Identity();
+    //Eigen::Vector3d del_t = Eigen::Vector3d::Identity();
     while(true)
     {
         if (iteration >= mCamBasedProblemConfig->MAX_ITERATION_)

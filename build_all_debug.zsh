@@ -7,7 +7,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j6
 
 cd ../example/ROS
-catkin_make -DCMAKE_BUILD_TYPE=Debug
+catkin_make -DCMAKE_BUILD_TYPE=Release
 source devel/setup.zsh
 
 cd ../..

@@ -40,7 +40,9 @@ set(SRC_FILE
         src/Optimizer.cpp
         src/type.cpp
         src/CamBasedProblemLM.cpp
-        src/utility.cpp )
+        src/utility.cpp
+        src/IMUPreintegrator.cpp
+        src/so3.cpp)
 
 
 set(INCLUDE_FILE
@@ -51,7 +53,9 @@ set(INCLUDE_FILE
         include/Optimizer.h
         include/type.h
         include/CamBasedProblemLM.h
-        include/GenericFunctor.h)
+        include/GenericFunctor.h
+        include/IMUPreintegrator.h
+        include/so3.h)
 
 # library
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -62,7 +66,7 @@ target_link_libraries(EVIT
         ${Pangolin_LIBRARIES}
         #${CERES_LIBRARIES}
         )
-
+#include_directories(SYSTEM "/foo/bar")
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 

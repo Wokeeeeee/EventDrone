@@ -23,7 +23,7 @@
 #include "EventCamera.h"
 #include "Optimizer.h"
 #include "type.h"
-
+#include "IMUPreintegrator.h"
 namespace CannyEVT{
 
 
@@ -35,6 +35,8 @@ public:
     ~System();
 
     void GrabEventData( const size_t &x, const size_t &y, const double &t, const bool &p );
+
+    void GrabIMUData(double_t dt, double_t ax, double_t ay, double_t az, double_t lax, double_t lay, double_t laz);
 
     void LoadPointCloud();
 
@@ -77,6 +79,8 @@ protected:
     double mTsDecayFactor;
 
     std::deque<EventMsg::ConstPtr> mEventBuf;
+    std::deque<IMUData::ConstPtr> mIMUBuf;
+
 
     //global point cloud
     std::vector<pcl::PointNormal *> vPointXYZPtr;

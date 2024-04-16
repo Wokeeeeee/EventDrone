@@ -27,6 +27,7 @@ public:
     TimeSurface::Ptr mTs;
 
    Eigen::Matrix4d T;
+   Eigen::VectorXd ix;
 
 
 

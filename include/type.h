@@ -25,6 +25,56 @@ struct ImuMsg
     Eigen::Vector3d gyr;
 };
 
+struct IMUData
+{
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    typedef std::shared_ptr<IMUData> Ptr;
+    typedef std::shared_ptr<IMUData const> ConstPtr;
+    IMUData() = default;
+
+    IMUData(const double &gx, const double &gy, const double &gz,
+            const double &ax, const double &ay, const double &az,
+            const double &t) : gyroscope_(gx, gy, gz), accelerometer_(ax, ay, az), timestamp_(t) {}
+
+    //IMU raw data
+    Eigen::Vector3d gyroscope_;
+    Eigen::Vector3d accelerometer_;
+
+    //Data timestamp
+    double timestamp_;
+
+    //IMU sensor parameters, no need to set multiple times
+    //IMU sensor continuous Gaussian white noise
+    static double sigma_gyroscope_;
+    static double sigma_accelerometer_;
+
+    //IMU sensor continous random walk
+    static double sigma_gyroscope_walk_;
+    static double sigma_accelerometer_walk_;
+
+    //IMU sensor data collection interval
+    static double delta_timestamp_;
+
+    //For the correspondences between discrete and continuous parameters, see the introduction of IMU model
+    //Square of discrete random walk of IMU sensor
+    static double gyroscope_noise_rw2_;
+    static double accelerometer_noise_rw2_;
+
+    //Square of discrete noise of IMU data
+    static double gyroscope_bias_rw2_;
+    static double accelerometer_bias_rw2_;
+
+    //Noise matrix
+    static Eigen::Matrix3d gyroscope_meas_covariance_;
+    static Eigen::Matrix3d accelerometer_meas_covariance_;
+
+    //random walk matrix
+    static Eigen::Matrix3d gyroscope_bias_rw_covariance_;
+    static Eigen::Matrix3d accelerometer_bias_rw_covariance_;
+
+};
+
 struct EventMsg
 {
     typedef std::shared_ptr<EventMsg> Ptr;

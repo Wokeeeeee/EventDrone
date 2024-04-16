@@ -14,7 +14,7 @@
 // #include <opencv2/core/core.hpp>
 // #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
-
+#include "IMUPreintegrator.h"
 namespace CannyEVT
 {
 
@@ -29,7 +29,7 @@ public:
 public:
 
     bool OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Eigen::Matrix4d& Tinit, const Eigen::Matrix4d& Twl,
-                              Eigen::Matrix4d& result);
+                              Eigen::Matrix4d& result, Eigen::VectorXd& ix);
 
 
     void OptimizeOneFrame(Frame::Ptr f, std::vector<Point::Ptr> points);

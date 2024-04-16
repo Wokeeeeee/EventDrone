@@ -6,12 +6,12 @@
 #include <opencv2/core/eigen.hpp>
 #include <pangolin/pangolin.h>
 #include "utility.h"
-
+#include <Eigen/Eigen>
 #include <pcl/common/transforms.h>
 
 using namespace CannyEVT;
 
-
+std::ofstream output("/home/lxy/event_camera/cannyEVT/Canny-EVT/imu_data.txt");
 System::System(const std::string& config_path):
 mEventCam(new EventCamera(config_path)), mLastEventStamp(0),mLastFrame(nullptr),
 mCloud(new std::vector<Point>()), mOptimizer(nullptr), mFirstFrameStamp(0),
@@ -71,7 +71,7 @@ void System::ReadYaml(const std::string &config_path )
         mFrameFrequency = fs["frame_frequency"];
         if (fs["frame_frequency"].isNone())
             WARNING("[System]", "config[frame_frequency] not set!");
-            
+
         mzMin = fs["zMin"];
         if (fs["zMin"].isNone())
             WARNING("[zMin]", "config[zMin] not set!");
@@ -136,6 +136,21 @@ void System::GrabEventData(const size_t &x, const size_t &y, const double &t, co
     con.notify_one();
 }
 
+void System::GrabIMUData(double_t t, double_t gx, double_t gy, double_t gz, double_t ax, double_t ay, double_t az) {
+    if (t < mLastEventStamp) {
+        return;
+    }
+
+    if (t < mFirstFrameStamp) {
+        return;
+    }
+    IMUData::ConstPtr imuMsg(new IMUData(gx, gy, gz, ax, ay, az, t));
+
+    mDataMutex.lock();
+    mIMUBuf.push_back(imuMsg);
+    mDataMutex.unlock();
+}
+
 void System::ProcessBackEnd(){
     bool bfirst = true;
     while(bStart_backend){
@@ -143,7 +158,7 @@ void System::ProcessBackEnd(){
         std::unique_lock<std::mutex> lk(mDataMutex);
 
         std::vector<FrameData> measurements;
-    
+
         con.wait(lk, [&measurements, this] { return (measurements = getMeasurements()).size() != 0;});
 
         lk.unlock();
@@ -151,10 +166,10 @@ void System::ProcessBackEnd(){
         for(auto &measurement : measurements){
             //make frame by the measurement
             Frame::Ptr CurrentFrame = MakeFrame(measurement);
-            
-            if (mLastFrame != nullptr && mFrameForOpticalFlow != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mFrameForOpticalFlow->T, CurrentFrame->T);        
-            else if(mLastFrame != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mLastFrame->T, CurrentFrame->T);
-            else mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, Eigen::Matrix4d::Identity(), Eigen::Matrix4d::Identity(), CurrentFrame->T);
+
+            if (mLastFrame != nullptr && mFrameForOpticalFlow != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mFrameForOpticalFlow->T, CurrentFrame->T, CurrentFrame->ix);
+            else if(mLastFrame != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mLastFrame->T, CurrentFrame->T, CurrentFrame->ix);
+            else mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, Eigen::Matrix4d::Identity(), Eigen::Matrix4d::Identity(), CurrentFrame->T, CurrentFrame->ix);
             if(mFrameQueue.size() >= mQueueSize){
                 mFrameQueue.push(CurrentFrame);
                 mFrameQueue.pop();
@@ -162,16 +177,15 @@ void System::ProcessBackEnd(){
             }
             else mFrameQueue.push(CurrentFrame);
 
-            
+
             mLastFrame = CurrentFrame;
             // Utility::DrawTs(CurrentFrame->mTs, mCloud, CurrentFrame->T, mEventCam, "new");
             Eigen::Quaterniond q(mLastFrame->T.block<3,3>(0,0));
-            mOfsPose << mLastFrame->mStamp << " " << mLastFrame->T.block<3,1>(0,3)(0) 
+            mOfsPose << mLastFrame->mStamp << " " << mLastFrame->T.block<3,1>(0,3)(0)
                                            <<  " " << mLastFrame->T.block<3,1>(0,3)(1)
-                                           << " " << mLastFrame->T.block<3,1>(0,3)(2) 
+                                           << " " << mLastFrame->T.block<3,1>(0,3)(2)
                                            << " " << q.coeffs() << std::endl;
             vPath_to_draw.push_back({mLastFrame->T.block<3,1>(0,3)(0), mLastFrame->T.block<3,1>(0,3)(1), mLastFrame->T.block<3,1>(0,3)(2)});
-            
         }
 
     }
@@ -195,6 +209,24 @@ std::vector<FrameData> System::getMeasurements()
             mEventBuf.pop_front();
         }
 
+        static IMUData::ConstPtr il = nullptr;
+
+        // in event time window update imu preintergrator
+        while(!mIMUBuf.empty() && mIMUBuf.front()->timestamp_<(mCurFrameStamp) ){
+            //update last imu data
+            if (il!= nullptr){
+                double ds=mIMUBuf.front()->timestamp_-il->timestamp_;
+                IMUPreintegrator::getInstance().Update(il->gyroscope_,il->accelerometer_,ds);
+                std::cout<<"grap an imu msg and update"<<std::endl;
+            }
+            il=mIMUBuf.front();
+            //std::cout<<mIMUBuf.front()->timestamp_<<" "\
+            //        <<mCurFrameStamp<<std::endl;
+            mIMUBuf.pop_front();
+            //std::cout<<imuPreintegrator.GetDeltaRot()<<std::endl<<imuPreintegrator.GetDeltaV();
+        }
+
+        //pack imu estimated x vector into FrameData
         measurements.emplace_back(Events, mCurFrameStamp);
 
         mCurFrameStamp = mCurFrameStamp + 1 / mFrameFrequency;
@@ -211,6 +243,13 @@ Frame::Ptr System::MakeFrame(const FrameData& frameData)
                                         frameData.stamp, mTsDecayFactor, mEventCam));
 
     Frame::Ptr F(new Frame(ts, frameData.stamp, mEventCam));
+    //imu part init
+    Eigen::Vector3d dc = Utility::rot2cayley(IMUPreintegrator::getInstance().GetDeltaRot());
+    Eigen::VectorXd ix(6);
+    ix.block<3, 1>(0, 0) = dc;
+    ix.block<3, 1>(3, 0) = IMUPreintegrator::getInstance().GetDeltaV();
+    //if (ix.norm()==0.0) ix.fill(0);
+    F->ix=ix;
     return F;
 }
 
@@ -292,7 +331,7 @@ void System::Draw(){
             double x = p.x;
             double y = p.y;
             double z = p.z;
-            
+
             // get the depth in camera coordinate
             Eigen::Vector4d t;
             t << x, y, z, 1;
