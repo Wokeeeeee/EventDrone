@@ -5,11 +5,11 @@
 
 using namespace CannyEVT;
 
-double IMUData::sigma_gyroscope_ = 1.6968e-4;
-double IMUData::sigma_accelerometer_ = 2.0e-3;
+double IMUData::sigma_gyroscope_ = 0.0007294729852113113;
+double IMUData::sigma_accelerometer_ = 0.0012655720309610252 ;
 
-double IMUData::sigma_gyroscope_walk_ = 1.9393E-5;
-double IMUData::sigma_accelerometer_walk_ = 3.0e-3;
+double IMUData::sigma_gyroscope_walk_ = 0.0012655720309610252;
+double IMUData::sigma_accelerometer_walk_ = 5.6386016813618435e-05;
 
 double IMUData::delta_timestamp_ = 0.005;
 

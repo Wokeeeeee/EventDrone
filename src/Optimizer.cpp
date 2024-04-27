@@ -75,8 +75,6 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
 
     size_t iteration = 0;
     size_t nfev = 0;
-    //Eigen::Matrix3d del_r = Eigen::Matrix3d::Identity();
-    //Eigen::Vector3d del_t = Eigen::Vector3d::Identity();
     while(true)
     {
         if (iteration >= mCamBasedProblemConfig->MAX_ITERATION_)
@@ -95,6 +93,7 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
         }
         Eigen::LevenbergMarquardtSpace::Status status = lm.minimizeOneStep(x);
         mEventProblem->addMotionUpdate(x);
+        //std::cout<<x(0)<<" "<<x(1)<<" "<<x(2)<<" | "<<x(3)<<" "<<x(4)<<" "<<x(5)<<std::endl;
 
         iteration++;
         nfev += lm.nfev;
@@ -131,7 +130,7 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
     }
 
     result = mEventProblem->getPose();
-
+    std::cout<<result.block<3,1>(0, 3)<<std::endl;
     return true;
 }
 

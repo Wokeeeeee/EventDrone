@@ -42,7 +42,7 @@ void pubIMUData( std::string &imu_topic, std::shared_ptr<CannyEVT::System> pSyst
 
             pSystem->GrabIMUData(ip->header.stamp.toSec() ,
                                  ip->angular_velocity.x, ip->angular_velocity.y, ip->angular_velocity.z,
-                                 ip->linear_acceleration.x, ip->linear_acceleration.y, ip->linear_acceleration.z);
+                                 ip->linear_acceleration.x, ip->linear_acceleration.y, -(ip->linear_acceleration.z-9.8));
 
         }
     }
@@ -116,13 +116,6 @@ int main( int argc, char **argv )
   thd_BackEnd.join();
   thd_PubEventData.join();
   thd_Draw.join();
-
-  //another way for reading data
-
-  // ros::Subscriber sub_imu = nh.subscribe( imu_topic, 2000, GrabImu);
-
-  // ros::Subscriber sub_event = nh.subscribe( event_topic, 500, GrabImu);
-
 
   ROS_INFO( "finished..." );
 

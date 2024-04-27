@@ -19,7 +19,7 @@ struct CamBasedProblemConfig {
     CamBasedProblemConfig(size_t patchSize_X, size_t patchSize_Y, size_t kernelSize, const std::string &LSnorm,
                        double huber_threshold, double invDepth_min_range = 0.2, double invDepth_max_range = 2.0,
                        const size_t MIN_NUM_EVENTS = 1000, const size_t MAX_REGISTRATION_POINTS = 3000,
-                       const size_t BATCH_SIZE = 200, const size_t MAX_ITERATION = 10, const size_t NUM_THREAD = 4)
+                       const size_t BATCH_SIZE = 200, const size_t MAX_ITERATION = 20, const size_t NUM_THREAD = 6)
             :patchSize_X_(patchSize_X), patchSize_Y_(patchSize_Y), kernelSize_(kernelSize), LSnorm_(LSnorm),
             huber_threshold_(huber_threshold),invDepth_min_range_(invDepth_min_range), invDepth_max_range_(invDepth_max_range),
             MIN_NUM_EVENTS_(MIN_NUM_EVENTS), MAX_REGISTRATION_POINTS_(MAX_REGISTRATION_POINTS), BATCH_SIZE_(BATCH_SIZE),
@@ -81,14 +81,15 @@ public:
     int predictPolarity(const Eigen::Vector2d& gradFlow, const Eigen::Vector2d& opticalFlow);
     void getWarpingTransformation(Eigen::Matrix4d &warpingTransf, const Eigen::Matrix<double, 6, 1> &x) const;
     void pointCulling(int col, int row, Eigen::MatrixXd& depthMatrix, Eigen::MatrixXd& indexMatrix, double depth, int index);
-
+    void computeTransformation(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const;
+    bool isValidPoint(Eigen::Vector2d &p) const;
 public:
     EventCamera::Ptr mEventCamera;
     CamBasedProblemConfig::Ptr mConfig;
     TimeSurface::Ptr mTs;
     pCloud mCloud;
     Eigen::Matrix4d iTcw;
-
+    bool zero_imu;
 
     ResidualItems mResItems, mResItemsStochSampled;
 

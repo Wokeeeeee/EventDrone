@@ -108,6 +108,7 @@ public:
     cv::Mat mPositiveHistoryEvent;
     cv::Mat mNegativeHistoryEvent;
     cv::Mat mHistoryEvent;
+    Eigen::Matrix4d T_cam_imu;
 };//end of the System class
 
 }

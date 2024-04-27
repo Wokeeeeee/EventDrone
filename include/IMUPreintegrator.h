@@ -16,6 +16,8 @@ namespace CannyEVT{
             static IMUPreintegrator instance;
             return instance;
         }
+        Eigen::Matrix4d T_cam_imu;
+
         /*
         @brief   Incremental update of IMU pre-integrated values
         @param   omega   GYroscope data after subtracting bias

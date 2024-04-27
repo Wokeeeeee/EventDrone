@@ -15,6 +15,7 @@ CamBasedProblemLM::CamBasedProblemLM(CamBasedProblemConfig::Ptr config, EventCam
 {
     mPatchSize = mConfig->patchSize_X_ * mConfig->patchSize_Y_;
     computeJ_G(Eigen::Matrix<double, 6, 1>::Zero(), mJ_G_0);
+    zero_imu = true;
 }
 
 
@@ -39,8 +40,8 @@ void CamBasedProblemLM::setConfig(CamBasedProblemConfig::Ptr config)
 void CamBasedProblemLM::setStochasticSampling(size_t offset, size_t N)
 {
     mResItemsStochSampled.clear();
-    mResItemsStochSampled.reserve(N);
-    for (size_t i = 0; i < N; i++) {
+    mResItemsStochSampled.reserve(2 * N);
+    for (size_t i = 0; i < 2 * N; i++) {
         if (offset + i >= mResItems.size())
             break;
         mResItemsStochSampled.push_back(mResItems[offset + i]);
@@ -50,7 +51,7 @@ void CamBasedProblemLM::setStochasticSampling(size_t offset, size_t N)
 
     if (mConfig->debug) {
         std::cout << "offset: " << offset << std::endl;
-        std::cout << "N: " << N << std::endl;
+        std::cout << "N: " << 2 * N << std::endl;
         std::cout << "ResItems_.size: " << mResItems.size() << std::endl;
         std::cout << "ResItemsStochSampled_.size: " << mResItemsStochSampled.size()<< std::endl;
     }
@@ -58,7 +59,7 @@ void CamBasedProblemLM::setStochasticSampling(size_t offset, size_t N)
 
 void CamBasedProblemLM::setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Matrix4d Twc, Eigen::Matrix4d Twl, Eigen::VectorXd ix)
 {
-    std::cout<<"lm problem setting init:"<<std::endl;
+    std::cout<<"------- problem init -------"<<std::endl;
     mTs = Ts;
     mCloud = cloud;
     mRwc = Twc.block<3, 3>(0, 0);
@@ -66,8 +67,16 @@ void CamBasedProblemLM::setProblem(TimeSurface::Ptr Ts, pCloud cloud, Eigen::Mat
 
     //create after mR and mT
     iTcw = Eigen::Matrix4d::Identity();
-    std::cout<<ix<<std::endl;
     getWarpingTransformation(iTcw,ix); // update the observed imu estimated rt at init section and one time only in optimizer
+
+    //ix.fill(0);
+    zero_imu=(ix.norm()==0);
+    if (!zero_imu) std::cout<<"adding imu factor"<<std::endl;
+    std::cout<<"------"<<std::endl;
+    std::cout<<ix<<std::endl;
+    //std::cout<<iTcw.block<3, 1>(0, 3)<<std::endl;
+    std::cout<<"------"<<std::endl;
+    //iTcw= Twc;
     int numPoints = mCloud->size();
     if (numPoints >  mConfig->MAX_REGISTRATION_POINTS_)
         numPoints = mConfig->MAX_REGISTRATION_POINTS_;
@@ -195,47 +204,6 @@ void CamBasedProblemLM::addMotionUpdate(const Eigen::Matrix<double, 6, 1> &dx)
     mRwc = svd.matrixU() * svd.matrixV().transpose();
     mtwc = dt + dR * mtwc;
 }
-double CamBasedProblemLM::ImuDiff(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const
-{
-    // 计算平移向量的差异
-    Eigen::Vector3d translationDiff = T1.block<3,1>(0,3) - T2.block<3,1>(0,3);
-
-    // 计算旋转矩阵的差异
-    Eigen::Matrix3d rotationDiff = T1.block<3,3>(0,0) * T2.block<3,3>(0,0).transpose();
-    Eigen::AngleAxisd angleAxis(rotationDiff);
-    double rotationDiffAngle = angleAxis.angle();
-
-    // 计算损失
-    double loss = translationDiff.norm() + rotationDiffAngle;
-
-    return loss;
-}
-
-//Eigen::Matrix<double, 1, 12> CamBasedProblemLM::ImuJacobian(const Eigen::Matrix4d& T1, const Eigen::Matrix4d& T2) const
-//{
-//    Eigen::Matrix<double, 1, 12> jacobian;
-//
-//    // 计算平移向量的差异
-//    Eigen::Vector3d translationDiff = T1.block<3,1>(0,3) - T2.block<3,1>(0,3);
-//    // 平移向量差异对T1的偏导数
-//    Eigen::Matrix<double, 3, 12> translationGradient;
-//    translationGradient.setZero();
-//    translationGradient.block<3, 3>(0, 0) = -Eigen::Matrix3d::Identity(); // 对平移向量的偏导数
-//
-//    // 计算旋转矩阵的差异
-//    Eigen::Matrix3d rotationDiff = T1.block<3,3>(0,0) * T2.block<3,3>(0,0).transpose();
-//    Eigen::AngleAxisd angleAxis(rotationDiff);
-//    double rotationDiffAngle = angleAxis.angle();
-//    // 旋转矩阵差异对T1的偏导数
-//    Eigen::Matrix<double, 3, 12> rotationGradient;
-//    rotationGradient.setZero();
-//    rotationGradient.block<3, 9>(0, 3) = -Eigen::Matrix<double, 3, 9>::Identity(); // 对旋转矩阵的偏导数
-//
-//    // 将平移向量和旋转矩阵的梯度拼接成完整的雅可比矩阵
-//    jacobian << translationGradient, rotationGradient;
-//
-//    return jacobian;
-//}
 
 
 int CamBasedProblemLM::operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::VectorXd &fvec) const
@@ -273,15 +241,9 @@ int CamBasedProblemLM::operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::V
             double irls_weight = 1.0;
             if (ri.residual_(0) > mConfig->huber_threshold_)
                 irls_weight = mConfig->huber_threshold_ / ri.residual_(0);
-            fvec[i] = sqrt(irls_weight) * ri.residual_(0)+ImuDiff(Tcw,iTcw);
-            // ri.weight_ = sqrt(irls_weight);
+            fvec[i] = sqrt(irls_weight) * ri.residual_(0);
         }
     }
-
-    //todo: calculate the loss between iTcw and Tcw
-    //fvec[mResItemsStochSampled.size()]=ImuDiff(Tcw,iTcw);
-
-    // std::cout << "fvec_event_norm:" << fvec.norm() <<std::endl;
 
     return 0;
 }
@@ -315,14 +277,21 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
     const double P22 = mEventCamera->getProjectionMatrix()(1, 1);
     const double P24 = mEventCamera->getProjectionMatrix()(1, 3);
 
-    for (size_t i = 0; i < mNumPoints; i++) {
+    for (size_t i = 0; i < mNumPoints; i+=2) {
         const ResidualItem &ri = mResItemsStochSampled[i];
-
+        const ResidualItem &rnew = mResItemsStochSampled[i+1];
         Eigen::Vector3d pw = ri.p_;
         Eigen::Vector3d pc = Tcw.block<3,3>(0, 0) * pw + Tcw.block<3,1>(0, 3);
         Eigen::Vector2d xc = mEventCamera->World2Cam(pc);
-        if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_))
+
+        Eigen::Vector3d ipc = iTcw.block<3, 3>(0, 0) * pw + iTcw.block<3, 1>(0, 3);
+        Eigen::Vector2d ixc = mEventCamera->World2Cam(ipc);
+        Eigen::Vector2d imu_df = (xc - ixc).norm() * (xc - ixc);
+
+        if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_)) {
             fjacBlock.row(i) = Eigen::Matrix<double, 1, 12>::Zero();
+            fjacBlock.row(i+1) = Eigen::Matrix<double, 1, 12>::Zero();
+        }
         else
         {
             // obtain the exact gradient by bilinear interpolation.
@@ -359,7 +328,7 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
             Eigen::Vector4d p4d;
             p4d.setIdentity();
             p4d.block<3,1>(0,0) = ri.p_;
-            
+
             Eigen::Vector4d p3d = Tcw * p4d;
             Eigen::Matrix<double, 2, 3> dPi_dT;
             dPi_dT.setZero();
@@ -377,10 +346,14 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
             dT_dG.block<3, 3>(0, 9) = Eigen::Matrix3d::Identity();
             //      LOG(INFO) << "dT_dG:\n" << dT_dG;
             // fjacBlock.row(i) = grad.transpose() * dPi_dT * J_constPart * dPi_dT * dT_dG * ri.p_(2); // ri.p_(2) refers to 1/rho_i which is actually coming with dInvPi_dx.
-            fjacBlock.row(i) = grad.transpose() * dPi_dT * dT_dG;
-            //Eigen::Matrix<double, 1, 12> m=ImuJacobian(pw,iTcw);
+            fjacBlock.row(i) = (grad ).transpose() * dPi_dT * dT_dG;
             fjacBlock.row(i) = ri.weight_ * fjacBlock.row(i);
-            //std::cout<<fjacBlock.row(i).cols()<<fjacBlock.row(i).rows()<<std::endl<<m.cols()<<m.rows()<<std::endl;
+
+            if(zero_imu && !isValidPoint(ixc)) imu_df = Eigen::Vector2d(0,0) ;
+            fjacBlock.row(i+1) = (imu_df / 640.).transpose() * dPi_dT * dT_dG;
+            fjacBlock.row(i+1) = ri.weight_ * fjacBlock.row(i+1);
+
+            //std::cout<<grad<<" "<<imu_df<<std::endl;
         }
     }
     // assemble with dG_dtheta
@@ -401,17 +374,22 @@ void CamBasedProblemLM::thread(Job &job) const
     size_t wy = mConfig->patchSize_Y_;
     size_t residualDim = wx * wy;
 
-    for (size_t i = threadID; i < numPoint; i += mConfig->NUM_THREAD)
+    for (size_t i = threadID * 2; i < numPoint; i += mConfig->NUM_THREAD*2)
     {
 
         ResidualItem &ri = vRI[i];
         ri.residual_ = Eigen::VectorXd(residualDim);
+        ResidualItem &rnew = vRI[i+1];
+        rnew.residual_ = Eigen::VectorXd(residualDim);
 
         Eigen::Vector3d pw = ri.p_;
         Eigen::Vector3d pc = Tcw.block<3,3>(0, 0) * pw + Tcw.block<3,1>(0, 3);
         Eigen::Vector2d xc = mEventCamera->World2Cam(pc);
-        if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_))
+
+        if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_)) {
             ri.residual_.setConstant(255.0);
+            rnew.residual_.setConstant(255);
+        }
         else
         {
             Eigen::MatrixXd tau1;
@@ -443,12 +421,29 @@ void CamBasedProblemLM::thread(Job &job) const
                     for (size_t x = 0; x < wx; x++)
                     {
                         size_t index = y * wx + x;
-                        ri.residual_[index] = tau1(y, x) * ri.weight_;
+                        ri.residual_[index] = tau1(y, x)  * ri.weight_; //todo: weights
+
+                        //try calculate imu module residual here
+                        Eigen::Vector3d ipc = iTcw.block<3, 3>(0, 0) * pw + iTcw.block<3, 1>(0, 3);
+                        Eigen::Vector2d ixc = mEventCamera->World2Cam(ipc);
+                        if (zero_imu || !isValidPoint(ixc)) rnew.residual_[index] = 255; //todo: weights
+                        else{
+
+                            double imu_residual = (xc - ixc).norm();
+                            rnew.residual_[index] = imu_residual / 640;
+
+                            //std::cout<<rnew.residual_[index]<<"  re  "<<ri.residual_[index]<<std::endl;
+                            //std::cout<<ixc<<"  dif  "<<xc<<std::endl;
+                        }
+
+
                     }
             }
             else
             {
                 ri.residual_.setConstant(255.0);
+                rnew.residual_.setConstant(255);
+
             }
 
         }
@@ -599,7 +594,13 @@ bool CamBasedProblemLM::isValidFlow(const Eigen::Vector2d &flow)
         return false;
     return true;
 }
-
+bool CamBasedProblemLM::isValidPoint(Eigen::Vector2d &p) const
+{
+    if (p(0) < 0 || p(0) > mEventCamera->getWidth()  ||
+        p(1) < 0 || p(1) > mEventCamera->getHeight() )
+        return false;
+    return true;
+}
 bool CamBasedProblemLM::isValidPatch(Eigen::Vector2d &patchCentreCoord, Eigen::MatrixXi &mask, size_t wx, size_t wy) const
 {
     if (patchCentreCoord(0) < (wx - 1) / 2 || patchCentreCoord(0) > mEventCamera->getWidth() - (wx - 1) / 2 - 1 ||
@@ -614,4 +615,22 @@ bool CamBasedProblemLM::isValidPatch(Eigen::Vector2d &patchCentreCoord, Eigen::M
     if (mask(patchCentreCoord(1) + (wy - 1) / 2, patchCentreCoord(0) + (wx - 1) / 2) < 125)
         return false;
     return true;
+}
+
+//from t1 to t2
+void CamBasedProblemLM::computeTransformation(const Eigen::Matrix4d &T1, const Eigen::Matrix4d &T2) const {
+    Eigen::Matrix3d R1 = T1.block<3, 3>(0, 0);
+    Eigen::Vector3d t1 = T1.block<3, 1>(0, 3);
+    Eigen::Matrix3d R2 = T2.block<3, 3>(0, 0);
+    Eigen::Vector3d t2 = T2.block<3, 1>(0, 3);
+
+    // 计算从 pose2 到 pose1 的旋转矩阵和平移向量
+    Eigen::Matrix3d R = R1.transpose() * R2;
+    Eigen::Vector3d t = R1.transpose() * (t2 - t1);
+
+    // 构建变换矩阵
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T.block<3, 3>(0, 0) = R;
+    T.block<3, 1>(0, 3) = t;
+    std::cout<<"delta_rt"<<Utility::rot2cayley(R)<<" "<< t<<std::endl;
 }
