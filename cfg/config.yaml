@@ -57,7 +57,7 @@ start_time: 1642661138.936530 # TBD
 #1642661139.103197 #test new for yrz
 
 # start_time: 1642661139.03653 # vins
-frame_frequency: 200 #hz
+frame_frequency: 300 #hz
 
 ts_decay_factor: 50.0e-3
 

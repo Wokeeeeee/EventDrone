@@ -35,7 +35,15 @@ IMUPreintegrator::Update(const Eigen::Vector3d &omega, const Eigen::Vector3d &ac
 
     //Step-1: Calculate IMU pre-integral rotation increment and Jacobian
     Eigen::Matrix3d dR = Sophus::SO3::exp(omega * delta_timestamp_).matrix();
-    //dR=T_cam_imu.block(0,0,3,3)*dR;
+
+     //adding svd to be more stable;
+    //std::cout<<"-----imu-----"<<std::endl;
+    //std::cout<<Utility::rot2cayley(dR)<<std::endl;
+    Eigen::Matrix3d newR = T_cam_imu.block(0, 0, 3, 3)* dR;
+    //Eigen::JacobiSVD<Eigen::Matrix3d> svd(newR, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    //dR = svd.matrixU() * svd.matrixV().transpose();
+    //std::cout<<Utility::rot2cayley(dR)<<std::endl;
+
     Eigen::Matrix3d Jr_R = Sophus::SO3::JacobianR(omega * delta_timestamp_);
 
     //Step 2: Calculate the uncertainity variance of the noise error of the IMU pre-integrator observation equation

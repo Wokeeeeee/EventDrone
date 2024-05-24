@@ -171,10 +171,10 @@ void System::ProcessBackEnd(){
             if (mLastFrame != nullptr && mFrameForOpticalFlow != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mFrameForOpticalFlow->T, CurrentFrame->T, CurrentFrame->ix);
             else if(mLastFrame != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mLastFrame->T, CurrentFrame->T, CurrentFrame->ix);
             else{
-                Eigen::Matrix4d pre_init=Eigen::Matrix4d::Zero();
-                Eigen::Quaternion q(-0.11,-0.36,-0.008,-0.925);
-                pre_init.block<3,3>(0,0)= q.toRotationMatrix();
-                pre_init.block<3, 1>(0, 3)=Eigen::Vector3d::Zero();
+                //Eigen::Matrix4d pre_init=Eigen::Matrix4d::Identity();
+                //Eigen::Quaternion q(-0.23,-0.17,-0.05,-0.96);
+                //pre_init.block<3,3>(0,0)= q.toRotationMatrix();
+                //std::cout<<pre_init<<std::endl;
                 mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, Eigen::Matrix4d::Identity(),
                                                  Eigen::Matrix4d::Identity(), CurrentFrame->T, CurrentFrame->ix);
             }

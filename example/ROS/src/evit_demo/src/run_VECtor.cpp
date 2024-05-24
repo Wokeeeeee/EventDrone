@@ -42,7 +42,7 @@ void pubIMUData( std::string &imu_topic, std::shared_ptr<CannyEVT::System> pSyst
 
             pSystem->GrabIMUData(ip->header.stamp.toSec() ,
                                  ip->angular_velocity.x, ip->angular_velocity.y, ip->angular_velocity.z,
-                                 ip->linear_acceleration.x, ip->linear_acceleration.y, -(ip->linear_acceleration.z-9.8));
+                                 ip->linear_acceleration.x, ip->linear_acceleration.y, (ip->linear_acceleration.z-9.8));
 
         }
     }

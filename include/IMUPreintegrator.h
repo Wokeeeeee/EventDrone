@@ -3,7 +3,7 @@
 
 #include "so3.h"
 #include "type.h"
-
+#include "utility.h"
 typedef Eigen::Matrix<double,9,9> Matrix9d;
 
 namespace CannyEVT{

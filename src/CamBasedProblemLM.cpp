@@ -215,6 +215,7 @@ int CamBasedProblemLM::operator()(const Eigen::Matrix<double, 6, 1> &x, Eigen::V
     for (size_t i = 0; i < mConfig->NUM_THREAD; i++) {
         jobs[i].pvRI = const_cast<ResidualItems *>(&mResItemsStochSampled);
         jobs[i].pTs = mTs;
+        jobs[i].iTcw = const_cast<Eigen::Matrix4d *>(&iTcw);
         jobs[i].Tcw = const_cast<Eigen::Matrix4d *>(&Tcw);
         jobs[i].threadID = i;
     }
@@ -286,7 +287,7 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
 
         Eigen::Vector3d ipc = iTcw.block<3, 3>(0, 0) * pw + iTcw.block<3, 1>(0, 3);
         Eigen::Vector2d ixc = mEventCamera->World2Cam(ipc);
-        Eigen::Vector2d imu_df = (xc - ixc).norm() * (xc - ixc);
+        Eigen::Vector2d imu_df = (xc - ixc).norm() * (xc - ixc)/800;
 
         if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_)) {
             fjacBlock.row(i) = Eigen::Matrix<double, 1, 12>::Zero();
@@ -350,8 +351,10 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
             fjacBlock.row(i) = ri.weight_ * fjacBlock.row(i);
 
             if(zero_imu && !isValidPoint(ixc)) imu_df = Eigen::Vector2d(0,0) ;
-            fjacBlock.row(i+1) = (imu_df / 640.).transpose() * dPi_dT * dT_dG;
+            fjacBlock.row(i+1) = (imu_df ).transpose() * dPi_dT * dT_dG;
             fjacBlock.row(i+1) = ri.weight_ * fjacBlock.row(i+1);
+
+            if(grad.norm()!=0&&imu_df.norm()!=0) std::cout<<grad<<" "<<imu_df<<" point "<<xc<<ixc<<std::endl;
 
             //std::cout<<grad<<" "<<imu_df<<std::endl;
         }
@@ -367,6 +370,7 @@ void CamBasedProblemLM::thread(Job &job) const
     ResidualItems &vRI = *job.pvRI;
     TimeSurface::ConstPtr TsObs = job.pTs;
     const Eigen::Matrix4d &Tcw = *job.Tcw;
+    const Eigen::Matrix4d &iTcw = *job.iTcw;
     size_t threadID = job.threadID;
     size_t numPoint = vRI.size();
 
@@ -431,7 +435,6 @@ void CamBasedProblemLM::thread(Job &job) const
 
                             double imu_residual = (xc - ixc).norm();
                             rnew.residual_[index] = imu_residual / 640;
-
                             //std::cout<<rnew.residual_[index]<<"  re  "<<ri.residual_[index]<<std::endl;
                             //std::cout<<ixc<<"  dif  "<<xc<<std::endl;
                         }
