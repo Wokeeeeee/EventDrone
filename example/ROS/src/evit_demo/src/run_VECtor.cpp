@@ -36,11 +36,12 @@ void pubIMUData( std::string &imu_topic, std::shared_ptr<CannyEVT::System> pSyst
     for ( rosbag::MessageInstance const m : rosbag::View( bag ) )
     {
         std::string topic = m.getTopic();
+        std::cout<<topic<<std::endl;
         if ( topic == imu_topic )
         {
             sensor_msgs::Imu::ConstPtr ip = m.instantiate<sensor_msgs::Imu>();
-
-            pSystem->GrabIMUData(ip->header.stamp.toSec() ,
+            std::cout<<ip->header.stamp.toSec()-1717339281.7951800823+2.430795<<std::endl;
+            pSystem->GrabIMUData(ip->header.stamp.toSec()-1717339281.7951800823+2.430795 ,
                                  ip->angular_velocity.x, ip->angular_velocity.y, ip->angular_velocity.z,
                                  ip->linear_acceleration.x, ip->linear_acceleration.y, (ip->linear_acceleration.z-9.8));
 

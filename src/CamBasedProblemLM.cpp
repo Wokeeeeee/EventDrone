@@ -354,7 +354,7 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
             fjacBlock.row(i+1) = (imu_df ).transpose() * dPi_dT * dT_dG;
             fjacBlock.row(i+1) = ri.weight_ * fjacBlock.row(i+1);
 
-            if(grad.norm()!=0&&imu_df.norm()!=0) std::cout<<grad<<" "<<imu_df<<" point "<<xc<<ixc<<std::endl;
+            //if(grad.norm()!=0&&imu_df.norm()!=0) std::cout<<grad<<" "<<imu_df<<" point "<<xc<<ixc<<std::endl;
 
             //std::cout<<grad<<" "<<imu_df<<std::endl;
         }
@@ -635,5 +635,5 @@ void CamBasedProblemLM::computeTransformation(const Eigen::Matrix4d &T1, const E
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     T.block<3, 3>(0, 0) = R;
     T.block<3, 1>(0, 3) = t;
-    std::cout<<"delta_rt"<<Utility::rot2cayley(R)<<" "<< t<<std::endl;
+    //std::cout<<"delta_rt"<<Utility::rot2cayley(R)<<" "<< t<<std::endl;
 }

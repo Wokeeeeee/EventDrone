@@ -19,7 +19,7 @@ struct CamBasedProblemConfig {
     CamBasedProblemConfig(size_t patchSize_X, size_t patchSize_Y, size_t kernelSize, const std::string &LSnorm,
                        double huber_threshold, double invDepth_min_range = 0.2, double invDepth_max_range = 2.0,
                        const size_t MIN_NUM_EVENTS = 1000, const size_t MAX_REGISTRATION_POINTS = 3000,
-                       const size_t BATCH_SIZE = 200, const size_t MAX_ITERATION = 15, const size_t NUM_THREAD = 6)
+                       const size_t BATCH_SIZE = 300, const size_t MAX_ITERATION = 20, const size_t NUM_THREAD = 10)
             :patchSize_X_(patchSize_X), patchSize_Y_(patchSize_Y), kernelSize_(kernelSize), LSnorm_(LSnorm),
             huber_threshold_(huber_threshold),invDepth_min_range_(invDepth_min_range), invDepth_max_range_(invDepth_max_range),
             MIN_NUM_EVENTS_(MIN_NUM_EVENTS), MAX_REGISTRATION_POINTS_(MAX_REGISTRATION_POINTS), BATCH_SIZE_(BATCH_SIZE),

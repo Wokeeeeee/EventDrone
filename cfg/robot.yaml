@@ -46,7 +46,7 @@ imu_topic: "/imu/data"
 bag_path: "/home/lxy/Downloads/robot_n_edited.bag"
 
 # for system
-pcd_path: "/home/lxy/event_camera/cannyEVT/dataset/robot_normal.pcd"
+pcd_path: "/home/lxy/event_camera/cannyEVT/robot.pcd"
 #"/home/cuili/Downloads/semi_cloud_enu_back.pcd"
 #
 #"/home/cuili/zzz/semidense-lines-gt-5/results_line_segments/SemiDense.pcd"
@@ -70,6 +70,6 @@ NormalFlow: 0
 queueSize: 5
 
 # for visualization
-visulization: 0 #visualize the 3D-2D alignment in optimization
+visulization: 1 #visualize the 3D-2D alignment in optimization
 zMin: 0.8
 zMax: 2.5

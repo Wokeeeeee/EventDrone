@@ -138,6 +138,8 @@ void System::GrabEventData(const size_t &x, const size_t &y, const double &t, co
 }
 
 void System::GrabIMUData(double_t t, double_t gx, double_t gy, double_t gz, double_t ax, double_t ay, double_t az) {
+    std::cout<<t<<" "<<mLastEventStamp<<" "<<mFirstFrameStamp<<std::endl;
+    WARNING("[System]","recieve imu data");
     if (t < mLastEventStamp) {
         return;
     }
@@ -146,7 +148,7 @@ void System::GrabIMUData(double_t t, double_t gx, double_t gy, double_t gz, doub
         return;
     }
     IMUData::ConstPtr imuMsg(new IMUData(gx, gy, gz, ax, ay, az, t));
-
+    std::cout<<t<<std::endl;
     mDataMutex.lock();
     mIMUBuf.push_back(imuMsg);
     mDataMutex.unlock();
@@ -237,7 +239,7 @@ std::vector<FrameData> System::getMeasurements()
                 IMUPreintegrator::getInstance().Update(mIMUBuf.front()->gyroscope_,
                                                        mIMUBuf.front()->accelerometer_,
                                                        ds);
-                std::cout << "grap an imu msg and update" << std::endl;
+                //std::cout << "grap an imu msg and update" << std::endl;
             }
             else{
                 IMUPreintegrator::getInstance().Update(mIMUBuf.front()->gyroscope_,

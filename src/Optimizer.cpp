@@ -101,7 +101,9 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
         if(mVisualize == 1){
 
             size_t width, height; 
-            cv::Mat reprojMap = cv::Mat(cv::Size(width, height), CV_8UC1, cv::Scalar(0));
+	    width=640;
+	    height=480;
+	    cv::Mat reprojMap = cv::Mat(cv::Size(width, height), CV_8UC1, cv::Scalar(0));
             cv::Mat TS = ts->getTs();
             TS.convertTo(reprojMap, CV_8UC1);
             cv::cvtColor(reprojMap, reprojMap, CV_GRAY2BGR);//COLOR_GARY2BGR for opencv 3 and 4
@@ -130,7 +132,7 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
     }
 
     result = mEventProblem->getPose();
-    std::cout<<result.block<3,1>(0, 3)<<std::endl;
+    //std::cout<<result.block<3,1>(0, 3)<<std::endl;
     return true;
 }
 
