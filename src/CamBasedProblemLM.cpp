@@ -287,7 +287,7 @@ int CamBasedProblemLM::df(const Eigen::Matrix<double, 6, 1> &x, Eigen::MatrixXd 
 
         Eigen::Vector3d ipc = iTcw.block<3, 3>(0, 0) * pw + iTcw.block<3, 1>(0, 3);
         Eigen::Vector2d ixc = mEventCamera->World2Cam(ipc);
-        Eigen::Vector2d imu_df = (xc - ixc).norm() * (xc - ixc)/800;
+        Eigen::Vector2d imu_df = (xc - ixc).norm() * (xc - ixc)/1000;
 
         if (!isValidPatch(xc, mEventCamera->getUndistortRectifyMask(), mConfig->patchSize_X_, mConfig->patchSize_Y_)) {
             fjacBlock.row(i) = Eigen::Matrix<double, 1, 12>::Zero();
@@ -434,7 +434,7 @@ void CamBasedProblemLM::thread(Job &job) const
                         else{
 
                             double imu_residual = (xc - ixc).norm();
-                            rnew.residual_[index] = imu_residual / 640;
+                            rnew.residual_[index] = imu_residual / 1000;
                             //std::cout<<rnew.residual_[index]<<"  re  "<<ri.residual_[index]<<std::endl;
                             //std::cout<<ixc<<"  dif  "<<xc<<std::endl;
                         }

@@ -19,22 +19,23 @@ if [ $PREPRECESS -eq 1 ]; then
 fi
 
 #$"gt"$SEQUENCE$".txt"
-GT_SEQ=$"gt"$SEQUENCE$".txt"
-RES_SEQ=$"result"$SEQUENCE$".txt"
+GT_SEQ="gt${SEQUENCE}.txt"
+RES_SEQ="result${SEQUENCE}.txt"
+
 
 echo "===TWO SEQUENCE==="
-echo $RES_SEQ
-echo $GT_SEQ
+echo ${RES_SEQ}
+echo ${GT_SEQ}
 echo "===TWO SEQUENCE==="
 
 cd ok2compare
 
-evo_traj tum --ref=$GT_SEQ $RES_SEQ 
+evo_traj tum --ref=${GT_SEQ} ${RES_SEQ} 
 echo "===+++@@@@@@+++==="
-evo_rpe tum $GT_SEQ $RES_SEQ -a -r trans_part $VISUAL
-evo_rpe tum $GT_SEQ $RES_SEQ -a -r angle_deg $VISUAL
+evo_rpe tum ${GT_SEQ} ${RES_SEQ}  -a -r trans_part $VISUAL
+evo_rpe tum ${GT_SEQ} ${RES_SEQ}  -a -r angle_deg $VISUAL
 echo "===+++@@@@@@+++==="
-evo_ape tum $GT_SEQ $RES_SEQ -a -r trans_part $VISUAL
-evo_ape tum $GT_SEQ $RES_SEQ -a -r angle_deg $VISUAL
+evo_ape tum ${GT_SEQ} ${RES_SEQ}  -a -r trans_part $VISUAL
+evo_ape tum ${GT_SEQ} ${RES_SEQ}  -a -r angle_deg $VISUAL
 
 cd ..

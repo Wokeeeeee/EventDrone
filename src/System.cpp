@@ -165,20 +165,30 @@ void System::ProcessBackEnd(){
         con.wait(lk, [&measurements, this] { return (measurements = getMeasurements()).size() != 0;});
 
         lk.unlock();
+        std::cout<<"measurements_len: "<<measurements.size()<<std::endl;
 
         for(auto &measurement : measurements){
             //make frame by the measurement
+            std::cout<<"make frame "<<int(mLastFrame != nullptr)<<int(mFrameForOpticalFlow != nullptr)<<std::endl;
             Frame::Ptr CurrentFrame = MakeFrame(measurement);
 
             if (mLastFrame != nullptr && mFrameForOpticalFlow != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mFrameForOpticalFlow->T, CurrentFrame->T, CurrentFrame->ix);
             else if(mLastFrame != nullptr) mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, mLastFrame->T, mLastFrame->T, CurrentFrame->T, CurrentFrame->ix);
             else{
-                //Eigen::Matrix4d pre_init=Eigen::Matrix4d::Identity();
-                //Eigen::Quaternion q(-0.23,-0.17,-0.05,-0.96);
-                //pre_init.block<3,3>(0,0)= q.toRotationMatrix();
-                //std::cout<<pre_init<<std::endl;
-                mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, Eigen::Matrix4d::Identity(),
-                                                 Eigen::Matrix4d::Identity(), CurrentFrame->T, CurrentFrame->ix);
+                Eigen::Matrix4d pre_init=Eigen::Matrix4d::Identity();
+                //for corner 0.0534729, 0.00883772, 0.0243886 Identity()
+                //for sofa_n -0.237254, -0.354578, -0.030937, -0.903896 -1.229384 -1.414954 -0.117344
+                //Eigen::Quaternion q(0.0309787, -0.0141975, 0.0361572, 0.998765);
+                //Eigen::Quaterniond q2(-0.030190, -0.445254, 0.001463, -0.894894);
+                //q.normalize();
+                //q2.normalize();
+                //pre_init.block<3,3>(0,0)= relative_rotation.toRotationMatrix();
+                pre_init.block<3,1>(0,3) = Eigen::Vector3d(0.0534729, 0.00883772, 0.0243886);
+                mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, pre_init,
+                                                 pre_init, CurrentFrame->T, CurrentFrame->ix);
+                //origin version
+                //mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, Eigen::Matrix4d::Identity(),
+                //                                 Eigen::Matrix4d::Identity(), CurrentFrame->T, CurrentFrame->ix);
             }
 
             if(mFrameQueue.size() >= mQueueSize){
@@ -207,7 +217,9 @@ void System::ProcessBackEnd(){
 
     }
 }
-
+int System::getEventBufferSize(){
+    return mEventBuf.size();
+}
 std::vector<FrameData> System::getMeasurements()
 {
     std::vector<FrameData> measurements;
@@ -227,12 +239,16 @@ std::vector<FrameData> System::getMeasurements()
             mEventBuf.pop_front();
             ecnt++;
         }
+        std::cout<<"measurement event_buf_len: "<<mEventBuf.size()<<std::endl;
+        //mEventBuf.clear();
+
 
         IMUPreintegrator::getInstance().reset();
         IMUData::ConstPtr il = nullptr;
         // in event time window update imu preintergrator
         double ds = 1 / mFrameFrequency;
         while (!mIMUBuf.empty() && mIMUBuf.front()->timestamp_ < (mCurFrameStamp)) {
+            std::cout<<"updating imu "<<std::endl;
             //update last imu data
             if (il != nullptr) { //如果有多拍,大概率没有
                 ds = mIMUBuf.front()->timestamp_ - il->timestamp_;

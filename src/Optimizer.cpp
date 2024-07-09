@@ -99,8 +99,7 @@ bool Optimizer::OptimizeEventProblem(TimeSurface::Ptr ts, pCloud cloud, const Ei
         nfev += lm.nfev;
 
         if(mVisualize == 1){
-
-            size_t width, height; 
+        size_t width, height;
 	    width=640;
 	    height=480;
 	    cv::Mat reprojMap = cv::Mat(cv::Size(width, height), CV_8UC1, cv::Scalar(0));

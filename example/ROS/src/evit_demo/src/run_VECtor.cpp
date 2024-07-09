@@ -40,11 +40,11 @@ void pubIMUData( std::string &imu_topic, std::shared_ptr<CannyEVT::System> pSyst
         if ( topic == imu_topic )
         {
             sensor_msgs::Imu::ConstPtr ip = m.instantiate<sensor_msgs::Imu>();
-            std::cout<<ip->header.stamp.toSec()-1717339281.7951800823+2.430795<<std::endl;
-            pSystem->GrabIMUData(ip->header.stamp.toSec()-1717339281.7951800823+2.430795 ,
+            //std::cout<<ip->header.stamp.toSec()<<std::endl;
+            pSystem->GrabIMUData(ip->header.stamp.toSec(),
                                  ip->angular_velocity.x, ip->angular_velocity.y, ip->angular_velocity.z,
-                                 ip->linear_acceleration.x, ip->linear_acceleration.y, (ip->linear_acceleration.z-9.8));
-
+                                 ip->linear_acceleration.x, ip->linear_acceleration.y, (ip->linear_acceleration.z-8));
+            //usleep(5000);
         }
     }
 
@@ -75,8 +75,10 @@ void PubEventData(std::string &event_topic, std::shared_ptr<CannyEVT::System> pS
             bool     p = e.polarity;
 
               pSystem->GrabEventData( x, y, ts, p );
-          } 
-          usleep(1000);
+          }
+            while (pSystem->getEventBufferSize()>100000){
+                usleep(10000);
+            }
         }
     }
 
@@ -87,7 +89,7 @@ void PubEventData(std::string &event_topic, std::shared_ptr<CannyEVT::System> pS
 
 int main( int argc, char **argv )
 {
-  ros::init( argc, argv, "CannyEVT_node" );
+  ros::init( argc, argv, "EventDrone_node" );
 
   ros::NodeHandle nh;
 
@@ -108,9 +110,9 @@ int main( int argc, char **argv )
   //open three threads
   std::thread thd_BackEnd(&CannyEVT::System::ProcessBackEnd, pSystem);
 	
-  //reading data from rosbag 
-  std::thread thd_PubEventData(PubEventData, std::ref(event_topic), pSystem);
-  std::thread thd_PubIMUData(pubIMUData, std::ref(imu_topic), pSystem);
+  //reading data from rosbag
+    std::thread thd_PubEventData(PubEventData, std::ref(event_topic), pSystem);
+    std::thread thd_PubIMUData(pubIMUData, std::ref(imu_topic), pSystem);
 
   std::thread thd_Draw(&CannyEVT::System::Draw, pSystem);
 

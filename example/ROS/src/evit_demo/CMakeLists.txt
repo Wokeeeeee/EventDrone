@@ -1,6 +1,6 @@
 
 cmake_minimum_required(VERSION 3.0.2)
-project(evit_demo)
+project(eventdrone_demo)
 
 # To be consistent with the configuration in esvo_core
 set(CMAKE_CXX_STANDARD 17)
@@ -40,8 +40,8 @@ include_directories(${PROJECT_SOURCE_DIR}/../../../../include)
 include_directories(${PROJECT_SOURCE_DIR}/../../devel/include)
 
 
-add_executable(run_VECtor src/run_VECtor.cpp)
-target_link_libraries(run_VECtor
+add_executable(ED_run_VECtor src/run_VECtor.cpp)
+target_link_libraries(ED_run_VECtor
         ${catkin_LIBRARIES}
         ${OpenCV_LIBRARIES}
         ${PROJECT_SOURCE_DIR}/../../../../lib/libEVIT.so)

@@ -50,6 +50,7 @@ public:
 
     void updateHistoryEvent(EventMsg::ConstPtr event);
     void updateHistoryEvent(std::vector<EventMsg::ConstPtr> events);
+    int getEventBufferSize();
 
 
     Frame::Ptr LastFrame;
