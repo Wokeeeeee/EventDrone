@@ -24,6 +24,8 @@
 #include "Optimizer.h"
 #include "type.h"
 #include "IMUPreintegrator.h"
+#include "SlidingWindowPoseOptimizer.h"
+
 namespace CannyEVT{
 
 
@@ -62,6 +64,7 @@ protected:
 protected:
     Optimizer::Ptr mOptimizer;
     EventCamera::Ptr mEventCam;
+    //SlidingWindowPoseOptimizer::Ptr mSlidingOptimizer;
 
     double mFirstFrameStamp;
     double mCurFrameStamp;

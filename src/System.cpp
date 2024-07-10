@@ -8,7 +8,6 @@
 #include "utility.h"
 #include <Eigen/Eigen>
 #include <pcl/common/transforms.h>
-
 using namespace CannyEVT;
 
 std::ofstream output("/home/lxy/event_camera/cannyEVT/Canny-EVT/imu_data.txt");
@@ -25,6 +24,7 @@ mNegativeHistoryEvent(mEventCam->getHeight(), mEventCam->getWidth(), CV_64F, 0.0
     //Load global point cloud
     LoadPointCloud();
     mOptimizer = std::make_shared<Optimizer>(config_path, mEventCam);
+    //mSlidingOptimizer =std::make_shared<SlidingWindowPoseOptimizer>(5,2);
 
     mOfsPose.open(mResultPath, std::ofstream::out);
     if(!mOfsPose.is_open())
@@ -183,7 +183,7 @@ void System::ProcessBackEnd(){
                 //q.normalize();
                 //q2.normalize();
                 //pre_init.block<3,3>(0,0)= relative_rotation.toRotationMatrix();
-                pre_init.block<3,1>(0,3) = Eigen::Vector3d(0.0534729, 0.00883772, 0.0243886);
+                pre_init.block<3,1>(0,3) = Eigen::Vector3d(0.0534729, -0.15, 0.030937);
                 mOptimizer->OptimizeEventProblem(CurrentFrame->mTs, mCloud, pre_init,
                                                  pre_init, CurrentFrame->T, CurrentFrame->ix);
                 //origin version
@@ -213,6 +213,9 @@ void System::ProcessBackEnd(){
                                            << " " << q.coeffs().w()
                                            << std::endl;
             vPath_to_draw.push_back({mLastFrame->T.block<3,1>(0,3)(0), mLastFrame->T.block<3,1>(0,3)(1), mLastFrame->T.block<3,1>(0,3)(2)});
+
+
+            //mSlidingOptimizer->addPose(mLastFrame->T,mLastFrame->mStamp);
         }
 
     }

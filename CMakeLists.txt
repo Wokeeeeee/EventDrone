@@ -55,7 +55,9 @@ set(INCLUDE_FILE
         include/CamBasedProblemLM.h
         include/GenericFunctor.h
         include/IMUPreintegrator.h
-        include/so3.h)
+        include/so3.h
+        include/SlidingWindowPoseOptimizer.h
+        )
 
 # library
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -70,3 +72,8 @@ target_link_libraries(EVIT
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 
+add_executable(test src/test.cpp)
+target_link_libraries(test
+        ${EIGEN3_INCLUDE_DIRS}
+        #${CERES_LIBRARIES}
+        )
